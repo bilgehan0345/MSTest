@@ -1,5 +1,5 @@
 // =============================================================================
-// mcp2515_sniffer.ino
+// mcp2515_sniffer.cpp
 // MCP2515 SPI CAN Modülü — CAN Bus Sniffer
 //
 // Özellikler:
@@ -19,21 +19,9 @@
 //   ESP32 GPIO4  --> MCP2515 INT (interrupt pini — opsiyonel ama önerilir)
 //   MCP2515 CANH --> CAN-H hattı
 //   MCP2515 CANL --> CAN-L hattı
-//
-// Kütüphane kurulumu (Arduino IDE):
-//   1. Arduino IDE aç -> Tools -> Manage Libraries
-//   2. Arama kutusuna "mcp_can" yaz
-//   3. "CAN_BUS_Shield by Seeed-Studio" kütüphanesini kur (v2.4.0+)
-//      VEYA
-//      Arama kutusuna "autowp mcp2515" yaz ->
-//      "MCP2515 by autowp" kütüphanesini kur (önerilir)
-//   Bu sketch autowp-mcp2515 kütüphanesini kullanır.
-//
-// MCP2515 osilatör frekansı:
-//   Modülünün üzerindeki kristale bak.
-//   8 MHz veya 16 MHz olabilir — MCP2515_OSCILLATOR_FREQ'i buna göre ayarla!
 // =============================================================================
 
+#include <Arduino.h>
 #include <SPI.h>
 #include <mcp2515.h>   // autowp-mcp2515 kütüphanesi
 
@@ -66,6 +54,14 @@
 // CSV LOGLAMA
 // ---------------------------------------------------------------------------
 #define CSV_OUTPUT_ENABLED  true
+
+// Forward declarations
+void IRAM_ATTR onCanInterrupt();
+void printCsvHeader();
+void printFrame(struct can_frame &frame);
+bool mcpInit();
+void handleSerialCommand();
+void processCommand(const String &line);
 
 // MCP2515 nesnesi oluştur
 MCP2515 mcp2515(MCP_CS_PIN);
@@ -301,7 +297,7 @@ void setup() {
 
   Serial.println(F("========================================"));
   Serial.println(F("  ESP32 MCP2515 CAN Sniffer"));
-  Serial.println(F("  mcp2515_sniffer.ino"));
+  Serial.println(F("  mcp2515_sniffer.cpp"));
   Serial.println(F("========================================"));
   Serial.println(F("CSV satirlari 'CSV,' ile baslar — Excel'e aktarirken filtrele."));
   Serial.println(F("Komut: send <id> <b0> <b1>...  Örnek: send 0x201 01 02 03"));

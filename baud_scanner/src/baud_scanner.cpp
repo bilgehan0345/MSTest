@@ -1,5 +1,5 @@
 // =============================================================================
-// baud_scanner.ino
+// baud_scanner.cpp
 // ESP32 TWAI — Otomatik Baud Rate Tarayıcı
 //
 // Baud rate'i bilmiyorsan bu sketch'i çalıştır:
@@ -13,6 +13,7 @@
 //   TJA1050 CANL --> CAN-L hattı
 // =============================================================================
 
+#include <Arduino.h>
 #include "driver/twai.h"
 
 // ---------------------------------------------------------------------------
@@ -112,7 +113,7 @@ void setup() {
 
   Serial.println(F("============================================="));
   Serial.println(F("  ESP32 TWAI Otomatik Baud Rate Tarayici"));
-  Serial.println(F("  baud_scanner.ino"));
+  Serial.println(F("  baud_scanner.cpp"));
   Serial.println(F("============================================="));
   Serial.print(F("Her baud rate "));
   Serial.print(TEST_DURATION_MS / 1000);

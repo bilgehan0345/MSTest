@@ -1,0 +1,15 @@
+- [x] Converting `mcp2515_sniffer`
+  - [x] Modify `mcp2515_sniffer/platformio.ini`
+  - [x] Create `mcp2515_sniffer/src/mcp2515_sniffer.cpp`
+  - [x] Delete `mcp2515_sniffer/mcp2515_sniffer.ino`
+- [x] Converting `twai_sniffer`
+  - [x] Modify `twai_sniffer/platformio.ini`
+  - [x] Create `twai_sniffer/src/twai_sniffer.cpp`
+  - [x] Delete `twai_sniffer/twai_sniffer.ino`
+- [x] Converting `baud_scanner`
+  - [x] Create `baud_scanner/src/baud_scanner.cpp`
+  - [x] Delete `baud_scanner/src/baud_scanner.ino`
+- [x] Verification
+  - [x] Verify `mcp2515_sniffer` build
+  - [x] Verify `twai_sniffer` build
+  - [x] Verify `baud_scanner` build

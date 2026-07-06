@@ -1,5 +1,5 @@
 // =============================================================================
-// twai_sniffer.ino
+// twai_sniffer.cpp
 // ESP32 Dahili TWAI (CAN) Controller — CAN Bus Sniffer
 //
 // Özellikler:
@@ -15,22 +15,9 @@
 //   TJA1050 CANH --> CAN-H hattı
 //   TJA1050 CANL --> CAN-L hattı
 //   GND          --> GND (ortak)
-//
-// Kütüphane kurulumu:
-//   Bu sketch harici kütüphane gerektirmez.
-//   ESP32 Arduino core ile birlikte gelen driver/twai.h kullanılır.
-//   Board Manager'da "esp32 by Espressif Systems" kurulu olmalı.
-//
-// Baud rate seçenekleri:
-//   TWAI_TIMING_CONFIG_25KBITS()
-//   TWAI_TIMING_CONFIG_50KBITS()
-//   TWAI_TIMING_CONFIG_100KBITS()
-//   TWAI_TIMING_CONFIG_125KBITS()
-//   TWAI_TIMING_CONFIG_250KBITS()   <-- yaygın
-//   TWAI_TIMING_CONFIG_500KBITS()   <-- yaygın
-//   TWAI_TIMING_CONFIG_1MBITS()     <-- yaygın
 // =============================================================================
 
+#include <Arduino.h>
 #include "driver/twai.h"
 
 // ---------------------------------------------------------------------------
@@ -59,6 +46,14 @@
 
 // CSV başlık satırını bir kere yazdırmak için bayrak
 static bool csvHeaderPrinted = false;
+
+// Forward declarations
+void printCsvHeader();
+bool twaiInit();
+void printFrame(const twai_message_t &msg);
+void handleSerialCommand();
+void processCommand(const String &line);
+void printTwaiStatus();
 
 // ---------------------------------------------------------------------------
 // Yardımcı: CSV başlığını bir kere yazdır
@@ -197,7 +192,6 @@ void processCommand(const String &line) {
   // Kelimelere böl
   String tokens[10];
   int tokenCount = 0;
-  int start = 0;
   String temp = line;
   temp.trim();
 
@@ -303,7 +297,7 @@ void setup() {
 
   Serial.println(F("========================================"));
   Serial.println(F("  ESP32 TWAI CAN Sniffer"));
-  Serial.println(F("  twai_sniffer.ino"));
+  Serial.println(F("  twai_sniffer.cpp"));
   Serial.println(F("========================================"));
   Serial.print(F("Mod: "));
   Serial.println(LISTEN_ONLY_MODE ? F("LISTEN-ONLY (sadece dinle)") : F("NORMAL (gönderim aktif)"));
