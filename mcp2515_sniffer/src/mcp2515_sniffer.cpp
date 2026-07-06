@@ -31,6 +31,11 @@
 #define MCP_CS_PIN   5    // Chip Select pini
 #define MCP_INT_PIN  4    // Interrupt pini (INT — opsiyonel, -1 yapınca polling modu)
 
+// ---------------------------------------------------------------------------
+// Hedef cihazın CAN ID'si
+// ---------------------------------------------------------------------------
+#define TARGET_CAN_ID 0x123
+
 // Eğer MCP2515 modülündeki INT pini bağlı değilse veya güvenilir değilse
 // burayı -1 yap ve çalışma testini polling ile yap.
 // ---------------------------------------------------------------------------
@@ -123,6 +128,10 @@ void printFrame(struct can_frame &frame) {
     Serial.print(F(" "));
     if (frame.data[i] < 0x10) Serial.print(F("0"));
     Serial.print(frame.data[i], HEX);
+  }
+
+  if (rawId == TARGET_CAN_ID) {
+    Serial.print(F("  [TARGET]"));
   }
 
   if (isRtr) Serial.print(F("  [RTR]"));

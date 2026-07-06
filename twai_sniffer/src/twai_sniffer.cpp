@@ -27,6 +27,11 @@
 #define CAN_RX_PIN  GPIO_NUM_5   // TJA1050 RXD --> ESP32
 
 // ---------------------------------------------------------------------------
+// Hedef cihazın CAN ID'si
+// ---------------------------------------------------------------------------
+#define TARGET_CAN_ID 0x123
+
+// ---------------------------------------------------------------------------
 // BAUD RATE — sadece bu satırı değiştir
 // Seçenekler: TWAI_TIMING_CONFIG_250KBITS(), _500KBITS(), _1MBITS() vs.
 // ---------------------------------------------------------------------------
@@ -126,6 +131,11 @@ void printFrame(const twai_message_t &msg) {
     Serial.print(F(" "));
     if (msg.data[i] < 0x10) Serial.print(F("0"));
     Serial.print(msg.data[i], HEX);
+  }
+
+  // Hedef ID ise işaretle
+  if (msg.identifier == TARGET_CAN_ID) {
+    Serial.print(F("  [TARGET]"));
   }
 
   // RTR frame ise belirt
