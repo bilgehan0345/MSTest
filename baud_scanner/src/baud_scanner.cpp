@@ -26,28 +26,17 @@
 #define TEST_DURATION_MS  3000
 
 // ---------------------------------------------------------------------------
-// Test edilecek baud rate'ler ve isimleri
+// Denenecek tek baud rate: 500 kbps
 // ---------------------------------------------------------------------------
 struct BaudEntry {
   const char* name;
   twai_timing_config_t timing;
 };
 
-// Makroların değerini struct içinde kullanmak için geçici bir wrapper
-static twai_timing_config_t t_250k = TWAI_TIMING_CONFIG_250KBITS();
 static twai_timing_config_t t_500k = TWAI_TIMING_CONFIG_500KBITS();
-static twai_timing_config_t t_1m   = TWAI_TIMING_CONFIG_1MBITS();
-static twai_timing_config_t t_125k = TWAI_TIMING_CONFIG_125KBITS();
-static twai_timing_config_t t_100k = TWAI_TIMING_CONFIG_100KBITS();
-static twai_timing_config_t t_50k  = TWAI_TIMING_CONFIG_50KBITS();
 
 BaudEntry baudList[] = {
-  { "250 kbps",  t_250k },
   { "500 kbps",  t_500k },
-  { "1000 kbps", t_1m   },
-  { "125 kbps",  t_125k },
-  { "100 kbps",  t_100k },
-  { " 50 kbps",  t_50k  },
 };
 const int BAUD_COUNT = sizeof(baudList) / sizeof(baudList[0]);
 
@@ -105,7 +94,7 @@ int tryBaud(twai_timing_config_t &t_config, unsigned long durationMs) {
 }
 
 // ---------------------------------------------------------------------------
-// setup() — tek seferlik tarama
+// setup() — sürekli tarama hazırlığı
 // ---------------------------------------------------------------------------
 void setup() {
   Serial.begin(115200);
@@ -115,13 +104,16 @@ void setup() {
   Serial.println(F("  ESP32 TWAI Otomatik Baud Rate Tarayici"));
   Serial.println(F("  baud_scanner.cpp"));
   Serial.println(F("============================================="));
-  Serial.print(F("Her baud rate "));
+  Serial.print(F("Sadece 500 kbps denenecek, her deneme "));
   Serial.print(TEST_DURATION_MS / 1000);
-  Serial.println(F(" saniye deneniyor..."));
+  Serial.println(F(" saniye sürecek."));
   Serial.println(F("---------------------------------------------"));
+}
 
-  int foundIdx = -1;
-
+// ---------------------------------------------------------------------------
+// loop() — sürekli tarama
+// ---------------------------------------------------------------------------
+void loop() {
   for (int i = 0; i < BAUD_COUNT; i++) {
     Serial.print(F("Deneniyor: "));
     Serial.print(baudList[i].name);
@@ -135,31 +127,12 @@ void setup() {
       Serial.println(F("frame YOK"));
     } else {
       Serial.print(frames);
-      Serial.println(F(" frame alindi! <-- BULUNDU"));
-      if (foundIdx == -1) foundIdx = i;  // İlk bulunanı kaydet
+      Serial.println(F(" frame alindi!"));
     }
   }
 
   Serial.println(F("---------------------------------------------"));
-  if (foundIdx >= 0) {
-    Serial.print(F("[SONUÇ] Aktif baud rate: "));
-    Serial.println(baudList[foundIdx].name);
-    Serial.println(F("  Bu degerle twai_sniffer.ino veya mcp2515_sniffer.ino'yu ayarla."));
-  } else {
-    Serial.println(F("[SONUÇ] Hiçbir baud rate'de frame alınamadı."));
-    Serial.println(F("  Kontrol et:"));
-    Serial.println(F("  1. CAN-H / CAN-L kablo bağlantıları"));
-    Serial.println(F("  2. 120 ohm terminatör direnci her iki ucta var mı?"));
-    Serial.println(F("  3. Motor sürücüsü açık mı ve CAN aktif mi?"));
-    Serial.println(F("  4. TJA1050 transceiver GND ortak mu?"));
-  }
-  Serial.println(F("============================================="));
-  Serial.println(F("Tarama tamamlandi. Cihazi resetle veya twai_sniffer.ino yükle."));
-}
-
-// ---------------------------------------------------------------------------
-// loop() — boş, tek seferlik tarama yapıldı
-// ---------------------------------------------------------------------------
-void loop() {
-  delay(5000);
+  Serial.println(F("Yeni döngü 2 saniye sonra başlıyor..."));
+  Serial.println(F("---------------------------------------------"));
+  delay(2000);
 }
