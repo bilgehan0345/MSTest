@@ -31,6 +31,8 @@
 #define MCP_CS_PIN   5    // Chip Select pini
 #define MCP_INT_PIN  4    // Interrupt pini (INT — opsiyonel, -1 yapınca polling modu)
 
+// Eğer MCP2515 modülündeki INT pini bağlı değilse veya güvenilir değilse
+// burayı -1 yap ve çalışma testini polling ile yap.
 // ---------------------------------------------------------------------------
 // MCP2515 OSILATÖR FREKANSI — modülündeki kristale bak!
 // Seçenekler: MCP_8MHZ, MCP_16MHZ, MCP_20MHZ
@@ -318,7 +320,7 @@ void setup() {
   if (MCP_INT_PIN >= 0) {
     pinMode(MCP_INT_PIN, INPUT_PULLUP);
     attachInterrupt(digitalPinToInterrupt(MCP_INT_PIN), onCanInterrupt, FALLING);
-    Serial.println(F("[OK] Interrupt modu aktif."));
+    Serial.println(F("[OK] Interrupt modu aktif. Aynı zamanda polling ile yedek kontrol var."));
   } else {
     Serial.println(F("[OK] Polling modu aktif (INT pini kullanilmiyor)."));
   }
@@ -333,16 +335,16 @@ void setup() {
 void loop() {
   bool shouldRead = false;
 
+  // Interrupt pin bağlı olsa bile bazen INT sinyali gelmeyebilir.
+  // Bu nedenle hem interrupt hem de polling kontrolü yapıyoruz.
   if (MCP_INT_PIN >= 0) {
-    // Interrupt modunda: bayrağı ve pin durumunu race condition olmadan güvenli oku
     noInterrupts();
     bool flag = canInterruptFlag;
     canInterruptFlag = false;
     interrupts();
 
-    shouldRead = flag || (digitalRead(MCP_INT_PIN) == LOW);
+    shouldRead = flag || (digitalRead(MCP_INT_PIN) == LOW) || (mcp2515.checkReceive() == MCP2515::ERROR_OK);
   } else {
-    // Polling modunda: her döngüde checkReceive yap
     shouldRead = (mcp2515.checkReceive() == MCP2515::ERROR_OK);
   }
 
