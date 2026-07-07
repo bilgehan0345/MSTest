@@ -63,7 +63,7 @@ void loop() {
     if (fakeRPM > 3000) fakeRPM = 0;
 
     // Mesaj ID ve uzunluğunu belirle
-    canMsg.can_id  = 0x12A; // Örnek Motor Durum ID'si
+    canMsg.can_id  = 0x123; // Örnek Motor Durum ID'si
     canMsg.can_dlc = 8;     // 8 Byte uzunluğunda veri
 
     // Verileri paketle
