@@ -21,6 +21,14 @@
 #define MCP2515_OSCILLATOR_FREQ  MCP_8MHZ 
 #define CAN_BAUD_RATE  CAN_500KBPS
 
+// ---------------------------------------------------------------------------
+// ARAÇ VE HIZ HESAPLAMA AYARLARI (Kendinize göre değiştirebilirsiniz)
+// ---------------------------------------------------------------------------
+#define GEAR_RATIO 1.0            // Vites / Redüktör Oranı (Doğrudan tekerleğe bağlıysa 1.0)
+#define WHEEL_RADIUS_M 0.30       // Tekerlek Yarıçapı (metre cinsinden, örn: 30cm = 0.30)
+#define WHEEL_CIRCUMFERENCE (2.0 * 3.14159 * WHEEL_RADIUS_M) // Tekerlek Çevresi
+
+
 struct can_frame rxMsg; // Alınan mesajlar için
 struct can_frame txMsg; // Gönderilen mesajlar için
 MCP2515 mcp2515(MCP_CS_PIN); 
@@ -61,8 +69,12 @@ void loop() {
     // ID 0x123 ise, komut gelmiş demektir.
     if (rxMsg.can_id == 0x123) { 
       // Gelen 8 byte'ın ilk iki byte'ını (data[0] ve data[1]) RPM olarak birleştiriyoruz.
-      targetRPM = (rxMsg.data[0] << 8) | rxMsg.data[1];
-      Serial.printf(">>> [KOMUT ALINDI] Hedef RPM: %d olarak guncellendi.\n", targetRPM);
+      int newTargetRPM = (rxMsg.data[0] << 8) | rxMsg.data[1];
+      
+      if (newTargetRPM != targetRPM) {
+        targetRPM = newTargetRPM;
+        Serial.printf(">>> [KOMUT ALINDI] Hedef RPM: %d olarak guncellendi.\n", targetRPM);
+      }
     }
   }
 
@@ -97,9 +109,23 @@ void loop() {
     MCP2515::ERROR err = mcp2515.sendMessage(&txMsg);
 
     if (err == MCP2515::ERROR_OK) {
-      Serial.printf("CAN TX -> ID: 0x%X | Hedef RPM: %d | Gercek RPM: %d | Sicaklik: %dC\n", txMsg.can_id, targetRPM, currentRPM, txMsg.data[2]);
+      static int lastPrintedRPM = -1;
+      
+      // Sadece RPM'de bir değişiklik varsa ekrana yazdır (Spam'i önler)
+      if (currentRPM != lastPrintedRPM) {
+        // Hız (km/h) = (RPM / Dişli Oranı) * Tekerlek Çevresi(m) * 60(dk) / 1000(m)
+        float currentSpeedKmh = (currentRPM / GEAR_RATIO) * WHEEL_CIRCUMFERENCE * 60.0 / 1000.0;
+        
+        Serial.printf("CAN TX -> ID: 0x%X | Hedef RPM: %d | Gercek RPM: %d | Hiz: %.1f km/h | Sicaklik: %dC\n", 
+                      txMsg.can_id, targetRPM, currentRPM, currentSpeedKmh, txMsg.data[2]);
+        lastPrintedRPM = currentRPM;
+      }
     } else {
-      Serial.printf("[HATA] Gonderim basarisiz! (err=%d)\n", err);
+      static unsigned long lastErrorTime = 0;
+      if (millis() - lastErrorTime > 2000) { // Hataları 2 saniyede bir yazdır
+        Serial.printf("[HATA] Gonderim basarisiz! (err=%d)\n", err);
+        lastErrorTime = millis();
+      }
     }
   }
 }
