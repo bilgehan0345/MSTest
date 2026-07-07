@@ -36,8 +36,8 @@ MCP2515 mcp2515(MCP_CS_PIN);
 unsigned long lastSendTime = 0;
 unsigned long lastRpmUpdateTime = 0;
 
-int currentRPM = 0; // Motorun anlık devri
-int targetRPM = 0;  // Karşı taraftan gelen hedef devir
+int rpm = 0; // Motorun anlık devri
+int targetRpm = 0;  // Karşı taraftan gelen hedef devir
 
 void setup() {
   Serial.begin(115200);
@@ -69,22 +69,22 @@ void loop() {
     // ID 0x123 ise, komut gelmiş demektir.
     if (rxMsg.can_id == 0x123) { 
       // Gelen 8 byte'ın ilk iki byte'ını (data[0] ve data[1]) RPM olarak birleştiriyoruz.
-      int newTargetRPM = (rxMsg.data[0] << 8) | rxMsg.data[1];
+      int newTargetRpm = (rxMsg.data[0] << 8) | rxMsg.data[1];
       
-      if (newTargetRPM != targetRPM) {
-        targetRPM = newTargetRPM;
+      if (newTargetRpm != targetRpm) {
+        targetRpm = newTargetRpm;
       }
     }
   }
 
   // 2. ADIM: Gerçekçilik katmak için motoru yavaş yavaş hedef RPM'e yaklaştır (Atalet Simülasyonu)
-  // Her 50ms'de bir devri hedefe doğru ufak ufak artır/azalt. İsterseniz direkt "currentRPM = targetRPM;" de yapabilirsiniz.
+  // Her 50ms'de bir devri hedefe doğru ufak ufak artır/azalt. İsterseniz direkt "rpm = targetRpm;" de yapabilirsiniz.
   if (millis() - lastRpmUpdateTime > 50) {
     lastRpmUpdateTime = millis();
-    if (currentRPM < targetRPM) currentRPM += 20;
-    if (currentRPM > targetRPM) currentRPM -= 20;
+    if (rpm < targetRpm) rpm += 20;
+    if (rpm > targetRpm) rpm -= 20;
     // Tam üzerine oturması için hassasiyet ayarı
-    if (abs(currentRPM - targetRPM) <= 20) currentRPM = targetRPM;
+    if (abs(rpm - targetRpm) <= 20) rpm = targetRpm;
   }
 
   // 3. ADIM: Her 500ms'de bir kendi anlık (gerçek) devrimizi karşı tarafa bildir.
@@ -95,29 +95,29 @@ void loop() {
     txMsg.can_dlc = 8;     // 8 Byte uzunluğunda veri
 
     // Verileri paketle
-    txMsg.data[0] = (currentRPM >> 8) & 0xFF; // Anlık RPM (High Byte)
-    txMsg.data[1] = currentRPM & 0xFF;        // Anlık RPM (Low Byte)
+    txMsg.data[0] = (rpm >> 8) & 0xFF; // Anlık RPM (High Byte)
+    txMsg.data[1] = rpm & 0xFF;        // Anlık RPM (Low Byte)
     txMsg.data[2] = 0x00;                     // Bos (Eskiden sicaklik vardi)
     txMsg.data[3] = 240;                      // Voltaj (Sabit 24.0V)
     txMsg.data[4] = 0x00; 
     txMsg.data[5] = 0x00;
     txMsg.data[6] = 0x00;
     // Durum: Motor dönüyorsa 1, duruyorsa 0
-    txMsg.data[7] = (currentRPM > 0) ? 0x01 : 0x00; 
+    txMsg.data[7] = (rpm > 0) ? 0x01 : 0x00; 
 
     MCP2515::ERROR err = mcp2515.sendMessage(&txMsg);
 
     if (err == MCP2515::ERROR_OK) {
-      static int lastPrintedRPM = -1;
+      static int lastPrintedRpm = -1;
       
       // Sadece RPM'de bir değişiklik varsa ekrana yazdır (Spam'i önler)
-      if (currentRPM != lastPrintedRPM) {
+      if (rpm != lastPrintedRpm) {
         // Hız (km/h) = (RPM / Dişli Oranı) * Tekerlek Çevresi(m) * 60(dk) / 1000(m)
-        float currentSpeedKmh = (currentRPM / GEAR_RATIO) * WHEEL_CIRCUMFERENCE * 60.0 / 1000.0;
+        int speed = (rpm / GEAR_RATIO) * WHEEL_CIRCUMFERENCE * 60.0 / 1000.0;
         
-        Serial.printf("CAN TX -> ID: 0x%X | Hedef RPM: %d | Gercek RPM: %d | Hiz: %.1f km/h\n", 
-                      txMsg.can_id, targetRPM, currentRPM, currentSpeedKmh);
-        lastPrintedRPM = currentRPM;
+        Serial.printf("CAN TX -> ID: 0x%X | Hedef RPM: %d | Gercek RPM: %d | Hiz: %d km/h\n", 
+                      txMsg.can_id, targetRpm, rpm, speed);
+        lastPrintedRpm = rpm;
       }
     } else {
       static unsigned long lastErrorTime = 0;
