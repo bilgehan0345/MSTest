@@ -15,6 +15,10 @@
 #define MCP_CS_PIN   5
 #define MCP_INT_PIN  4 
 
+#define NEXTION_RX_PIN 16 // Nextion ekran RX pini (ESP32'nin TX'ine bağlanmalı değil, bu pini Nextion'un TX'ine bağlayın)
+#define NEXTION_TX_PIN 17 // Nextion ekran TX pini (Bu pini Nextion'un RX'ine bağlayın)
+#define NEXTION_BAUD   9600 // Nextion varsayılan baud hızı
+
 // ---------------------------------------------------------------------------
 // CAN AYARLARI
 // ---------------------------------------------------------------------------
@@ -39,8 +43,18 @@ unsigned long lastRpmUpdateTime = 0;
 int rpm = 0; // Motorun anlık devri
 int targetRpm = 0;  // Karşı taraftan gelen hedef devir
 
+// Nextion ekrana komut gönderme fonksiyonu
+void sendNextionCommand(String cmd) {
+  Serial2.print(cmd);
+  Serial2.write(0xFF);
+  Serial2.write(0xFF);
+  Serial2.write(0xFF);
+}
+
 void setup() {
   Serial.begin(115200);
+  // Nextion ekran için Serial2 başlatılıyor
+  Serial2.begin(NEXTION_BAUD, SERIAL_8N1, NEXTION_RX_PIN, NEXTION_TX_PIN);
   delay(1000);
   
   Serial.println("========================================");
@@ -117,6 +131,13 @@ void loop() {
         
         Serial.printf("CAN TX -> ID: 0x%X | Hedef RPM: %d | Gercek RPM: %d | Hiz: %d km/h\n", 
                       txMsg.can_id, targetRpm, rpm, speed);
+
+        // Nextion ekrana verileri gönder
+        // Not: "n0" ve "n1" Nextion ekranındaki Number (sayı) objelerinizin isimleridir.
+        // Kendi ekran tasarımınızdaki obje isimlerine (örneğin nRpm, nSpeed vb.) göre burayı güncelleyebilirsiniz.
+        sendNextionCommand("n0.val=" + String(rpm));
+        sendNextionCommand("n1.val=" + String(speed));
+
         lastPrintedRpm = rpm;
       }
     } else {
