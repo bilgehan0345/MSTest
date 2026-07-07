@@ -73,7 +73,6 @@ void loop() {
       
       if (newTargetRPM != targetRPM) {
         targetRPM = newTargetRPM;
-        Serial.printf(">>> [KOMUT ALINDI] Hedef RPM: %d olarak guncellendi.\n", targetRPM);
       }
     }
   }
@@ -98,7 +97,7 @@ void loop() {
     // Verileri paketle
     txMsg.data[0] = (currentRPM >> 8) & 0xFF; // Anlık RPM (High Byte)
     txMsg.data[1] = currentRPM & 0xFF;        // Anlık RPM (Low Byte)
-    txMsg.data[2] = 45;                       // Motor Sıcaklığı (Sabit 45)
+    txMsg.data[2] = 0x00;                     // Bos (Eskiden sicaklik vardi)
     txMsg.data[3] = 240;                      // Voltaj (Sabit 24.0V)
     txMsg.data[4] = 0x00; 
     txMsg.data[5] = 0x00;
@@ -116,8 +115,8 @@ void loop() {
         // Hız (km/h) = (RPM / Dişli Oranı) * Tekerlek Çevresi(m) * 60(dk) / 1000(m)
         float currentSpeedKmh = (currentRPM / GEAR_RATIO) * WHEEL_CIRCUMFERENCE * 60.0 / 1000.0;
         
-        Serial.printf("CAN TX -> ID: 0x%X | Hedef RPM: %d | Gercek RPM: %d | Hiz: %.1f km/h | Sicaklik: %dC\n", 
-                      txMsg.can_id, targetRPM, currentRPM, currentSpeedKmh, txMsg.data[2]);
+        Serial.printf("CAN TX -> ID: 0x%X | Hedef RPM: %d | Gercek RPM: %d | Hiz: %.1f km/h\n", 
+                      txMsg.can_id, targetRPM, currentRPM, currentSpeedKmh);
         lastPrintedRPM = currentRPM;
       }
     } else {
