@@ -108,11 +108,17 @@ void loop() {
     MCP2515::ERROR err = mcp2515.sendMessage(&txMsg);
 
     if (err == MCP2515::ERROR_OK) {
-      // Hız (km/h) = (RPM / Dişli Oranı) * Tekerlek Çevresi(m) * 60(dk) / 1000(m)
-      int speed = (rpm / GEAR_RATIO) * WHEEL_CIRCUMFERENCE * 60.0 / 1000.0;
+      static int lastPrintedRpm = -1;
       
-      Serial.printf("CAN TX -> ID: 0x%X | Hedef RPM: %d | Gercek RPM: %d | Hiz: %d km/h\n", 
-                    txMsg.can_id, targetRpm, rpm, speed);
+      // Sadece RPM'de bir değişiklik varsa ekrana yazdır (Spam'i önler)
+      if (rpm != lastPrintedRpm) {
+        // Hız (km/h) = (RPM / Dişli Oranı) * Tekerlek Çevresi(m) * 60(dk) / 1000(m)
+        int speed = (rpm / GEAR_RATIO) * WHEEL_CIRCUMFERENCE * 60.0 / 1000.0;
+        
+        Serial.printf("CAN TX -> ID: 0x%X | Hedef RPM: %d | Gercek RPM: %d | Hiz: %d km/h\n", 
+                      txMsg.can_id, targetRpm, rpm, speed);
+        lastPrintedRpm = rpm;
+      }
     } else {
       static unsigned long lastErrorTime = 0;
       if (millis() - lastErrorTime > 2000) { // Hataları 2 saniyede bir yazdır
