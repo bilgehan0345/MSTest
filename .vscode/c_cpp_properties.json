@@ -9,7 +9,7 @@
             "name": "PlatformIO",
             "includePath": [
                 "C:/Users/Bilgehan/Desktop/MSTest/MSTest",
-                "C:/Users/Bilgehan/Desktop/MSTest/MSTest/.pio/libdeps/mock_motor/autowp-mcp2515",
+                "C:/Users/Bilgehan/Desktop/MSTest/MSTest/.pio/libdeps/mcp2515_sniffer/autowp-mcp2515",
                 "C:/Users/Bilgehan/.platformio/packages/framework-arduinoespressif32/libraries/SPI/src",
                 "C:/Users/Bilgehan/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/newlib/platform_include",
                 "C:/Users/Bilgehan/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include",
@@ -245,7 +245,7 @@
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
                     "C:/Users/Bilgehan/Desktop/MSTest/MSTest",
-                    "C:/Users/Bilgehan/Desktop/MSTest/MSTest/.pio/libdeps/mock_motor/autowp-mcp2515",
+                    "C:/Users/Bilgehan/Desktop/MSTest/MSTest/.pio/libdeps/mcp2515_sniffer/autowp-mcp2515",
                     "C:/Users/Bilgehan/.platformio/packages/framework-arduinoespressif32/libraries/SPI/src",
                     "C:/Users/Bilgehan/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/newlib/platform_include",
                     "C:/Users/Bilgehan/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include",

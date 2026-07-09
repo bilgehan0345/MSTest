@@ -132,6 +132,14 @@ void printFrame(struct can_frame &frame) {
 
   if (rawId == TARGET_CAN_ID) {
     Serial.print(F("  [TARGET]"));
+    if (frame.can_dlc >= 2) {
+      int rpm = (frame.data[0] << 8) | frame.data[1];
+      float gearRatio = 1.0;
+      float wheelRadius = 0.30;
+      float wheelCircumference = 2.0 * 3.14159 * wheelRadius;
+      int speed = (rpm / gearRatio) * wheelCircumference * 60.0 / 1000.0;
+      Serial.printf("  | Alinan RPM: %d | Hiz: %d km/h", rpm, speed);
+    }
   }
 
   if (isRtr) Serial.print(F("  [RTR]"));
