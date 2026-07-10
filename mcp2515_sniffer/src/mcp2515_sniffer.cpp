@@ -52,10 +52,11 @@
 
 // ---------------------------------------------------------------------------
 // MOD SEÇİMİ
-// true  = Listen-only (sadece dinle, bus'a karışma)
-// false = Normal mod (send komutu çalışır)
+// 0 = Normal Mod (okuma ve yazma aktif)
+// 1 = Listen-Only Mod (sadece dinle, bus'a karisma)
+// 2 = Loopback Mod (kendi gonderdigini kendi alir, test amaclidir)
 // ---------------------------------------------------------------------------
-#define LISTEN_ONLY_MODE  false
+#define OPERATING_MODE 0
 
 // ---------------------------------------------------------------------------
 // CSV LOGLAMA
@@ -109,11 +110,11 @@ void printFrame(struct can_frame &frame) {
   if (frame.can_dlc >= 2) {
     int rpm = (frame.data[0] << 8) | frame.data[1];
     float gearRatio = 1.0;
-    float wheelRadius = 0.30;
+    float wheelRadius = 0.275;
     float wheelCircumference = 2.0 * 3.14159 * wheelRadius;
-    int speed = (rpm / gearRatio) * wheelCircumference * 60.0 / 1000.0;
+    float speed = (rpm / gearRatio) * wheelCircumference * 60.0 / 1000.0;
     
-    Serial.printf(" | RPM: %d | Hiz: %d km/h", rpm, speed);
+    Serial.printf(" | RPM: %d | Hiz: %.1f km/h", rpm, speed);
   }
   
   Serial.println();
@@ -144,9 +145,12 @@ bool mcpInit() {
   }
 
   // Mod ayarla
-  if (LISTEN_ONLY_MODE) {
+  if (OPERATING_MODE == 1) {
     err = mcp2515.setListenOnlyMode();
     Serial.println(F("  Mod: LISTEN-ONLY"));
+  } else if (OPERATING_MODE == 2) {
+    err = mcp2515.setLoopbackMode();
+    Serial.println(F("  Mod: LOOPBACK (Test Modu)"));
   } else {
     err = mcp2515.setNormalMode();
     Serial.println(F("  Mod: NORMAL (gönderim aktif)"));
@@ -231,9 +235,9 @@ void processCommand(const String &line) {
     txFrame.data[i] = (uint8_t)strtoul(tokens[i + 2].c_str(), nullptr, 16);
   }
 
-  if (LISTEN_ONLY_MODE) {
-    Serial.println(F("[UYARI] LISTEN_ONLY_MODE=true, frame gönderilemez."));
-    Serial.println(F("        Göndermek için LISTEN_ONLY_MODE'u false yap ve yeniden yükle."));
+  if (OPERATING_MODE == 1) {
+    Serial.println(F("[UYARI] Listen-Only modunda frame gönderilemez."));
+    Serial.println(F("        Göndermek için OPERATING_MODE'u 0 veya 2 yapin."));
     return;
   }
 
@@ -316,15 +320,20 @@ void loop() {
   }
 
   if (shouldRead) {
-    struct can_frame rxFrame;
-    MCP2515::ERROR err = mcp2515.readMessage(&rxFrame);
+    while (true) {
+      struct can_frame rxFrame;
+      MCP2515::ERROR err = mcp2515.readMessage(&rxFrame);
 
-    if (err == MCP2515::ERROR_OK) {
-      lastMessageTime = millis();
-      printFrame(rxFrame);
-    } else if (err != MCP2515::ERROR_NOMSG) {
-      Serial.print(F("[HATA] readMessage kodu: "));
-      Serial.println((int)err);
+      if (err == MCP2515::ERROR_OK) {
+        lastMessageTime = millis();
+        printFrame(rxFrame);
+      } else if (err == MCP2515::ERROR_NOMSG) {
+        break;
+      } else {
+        Serial.print(F("[HATA] readMessage kodu: "));
+        Serial.println((int)err);
+        break;
+      }
     }
   }
 

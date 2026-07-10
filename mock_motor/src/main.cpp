@@ -25,7 +25,7 @@
 // ARAÇ VE HIZ HESAPLAMA AYARLARI (Kendinize göre değiştirebilirsiniz)
 // ---------------------------------------------------------------------------
 #define GEAR_RATIO 1.0            // Vites / Redüktör Oranı (Doğrudan tekerleğe bağlıysa 1.0)
-#define WHEEL_RADIUS_M 0.30       // Tekerlek Yarıçapı (metre cinsinden, örn: 30cm = 0.30)
+#define WHEEL_RADIUS_M 0.275      // Tekerlek Yarıçapı (metre cinsinden, örn: 30cm = 0.30)
 #define WHEEL_CIRCUMFERENCE (2.0 * 3.14159 * WHEEL_RADIUS_M) // Tekerlek Çevresi
 
 
@@ -91,7 +91,7 @@ void loop() {
   if (millis() - lastSendTime > 500) {
     lastSendTime = millis();
 
-    txMsg.can_id  = 0x123; // Bizim durum mesajı ID'miz
+    txMsg.can_id  = 0x124; // Bizim durum mesajı ID'miz
     txMsg.can_dlc = 8;     // 8 Byte uzunluğunda veri
 
     // Verileri paketle
