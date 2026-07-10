@@ -55,7 +55,7 @@
 // true  = Listen-only (sadece dinle, bus'a karışma)
 // false = Normal mod (send komutu çalışır)
 // ---------------------------------------------------------------------------
-#define LISTEN_ONLY_MODE  true
+#define LISTEN_ONLY_MODE  false
 
 // ---------------------------------------------------------------------------
 // CSV LOGLAMA
@@ -87,85 +87,36 @@ void IRAM_ATTR onCanInterrupt() {
 }
 
 // ---------------------------------------------------------------------------
-// CSV başlığını bir kere yazdır
+// CSV başlığını bir kere yazdır (İptal edildi)
 // ---------------------------------------------------------------------------
 void printCsvHeader() {
-  if (CSV_OUTPUT_ENABLED && !csvHeaderPrinted) {
-    Serial.println(F("millis,id_hex,ide,dlc,byte0,byte1,byte2,byte3,byte4,byte5,byte6,byte7"));
-    csvHeaderPrinted = true;
-  }
+  // Empty, no longer printing CSV
 }
 
 // ---------------------------------------------------------------------------
 // Gelen bir frame'i güzel formatta Serial'e yazdır
 // ---------------------------------------------------------------------------
 void printFrame(struct can_frame &frame) {
-  unsigned long ts = millis();
-  bool isExtended = (frame.can_id & CAN_EFF_FLAG) != 0;
-  uint32_t rawId  = frame.can_id & (isExtended ? CAN_EFF_MASK : CAN_SFF_MASK);
-  bool isRtr      = (frame.can_id & CAN_RTR_FLAG) != 0;
+  uint32_t rawId = frame.can_id & ((frame.can_id & CAN_EFF_FLAG) != 0 ? CAN_EFF_MASK : CAN_SFF_MASK);
 
-  // --- İnsan-okunur format ---
-  Serial.print(F("["));
-  Serial.print(ts);
-  Serial.print(F(" ms] ID: 0x"));
-
-  if (isExtended) {
-    Serial.print(rawId, HEX);
-    Serial.print(F(" (EXT)"));
-  } else {
-    char idBuf[8];
-    snprintf(idBuf, sizeof(idBuf), "%03X", rawId);
-    Serial.print(idBuf);
-    Serial.print(F(" (STD)"));
-  }
-
-  Serial.print(F("  DLC: "));
-  Serial.print(frame.can_dlc);
-  Serial.print(F("  Data:"));
-
+  // Gelen veriyi her halukarda yazdir ki veri gelip gelmedigini gorebilelim
+  Serial.printf("ID: 0x%03X | DLC: %d | Data:", rawId, frame.can_dlc);
   for (int i = 0; i < frame.can_dlc; i++) {
-    Serial.print(F(" "));
-    if (frame.data[i] < 0x10) Serial.print(F("0"));
-    Serial.print(frame.data[i], HEX);
+    Serial.printf(" %02X", frame.data[i]);
   }
 
-  if (rawId == TARGET_CAN_ID) {
-    Serial.print(F("  [TARGET]"));
-    if (frame.can_dlc >= 2) {
-      int rpm = (frame.data[0] << 8) | frame.data[1];
-      float gearRatio = 1.0;
-      float wheelRadius = 0.30;
-      float wheelCircumference = 2.0 * 3.14159 * wheelRadius;
-      int speed = (rpm / gearRatio) * wheelCircumference * 60.0 / 1000.0;
-      Serial.printf("  | Alinan RPM: %d | Hiz: %d km/h", rpm, speed);
-    }
+  // İlk 2 byte'tan RPM ve Hız hesapla (eger en az 2 byte veri varsa)
+  if (frame.can_dlc >= 2) {
+    int rpm = (frame.data[0] << 8) | frame.data[1];
+    float gearRatio = 1.0;
+    float wheelRadius = 0.30;
+    float wheelCircumference = 2.0 * 3.14159 * wheelRadius;
+    int speed = (rpm / gearRatio) * wheelCircumference * 60.0 / 1000.0;
+    
+    Serial.printf(" | RPM: %d | Hiz: %d km/h", rpm, speed);
   }
-
-  if (isRtr) Serial.print(F("  [RTR]"));
+  
   Serial.println();
-
-  // --- CSV format ---
-  if (CSV_OUTPUT_ENABLED) {
-    Serial.print(F("CSV,"));
-    Serial.print(ts);
-    Serial.print(F(",0x"));
-    Serial.print(rawId, HEX);
-    Serial.print(F(","));
-    Serial.print(isExtended ? F("EXT") : F("STD"));
-    Serial.print(F(","));
-    Serial.print(frame.can_dlc);
-    for (int i = 0; i < 8; i++) {
-      Serial.print(F(","));
-      if (i < frame.can_dlc) {
-        if (frame.data[i] < 0x10) Serial.print(F("0"));
-        Serial.print(frame.data[i], HEX);
-      } else {
-        Serial.print(F("--"));
-      }
-    }
-    Serial.println();
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -315,12 +266,8 @@ void setup() {
   delay(1000);
 
   Serial.println(F("========================================"));
-  Serial.println(F("  ESP32 MCP2515 CAN Sniffer"));
-  Serial.println(F("  mcp2515_sniffer.cpp"));
+  Serial.println(F("  ESP32 MCP2515 RPM/Hiz Alaci"));
   Serial.println(F("========================================"));
-  Serial.println(F("CSV satirlari 'CSV,' ile baslar — Excel'e aktarirken filtrele."));
-  Serial.println(F("Komut: send <id> <b0> <b1>...  Örnek: send 0x201 01 02 03"));
-  Serial.println(F("----------------------------------------"));
 
   printCsvHeader();
 
@@ -350,6 +297,9 @@ void setup() {
 // loop()
 // ---------------------------------------------------------------------------
 void loop() {
+  static unsigned long lastMessageTime = millis();
+  static unsigned long lastWarningTime = 0;
+  
   bool shouldRead = false;
 
   // Interrupt pin bağlı olsa bile bazen INT sinyali gelmeyebilir.
@@ -370,10 +320,19 @@ void loop() {
     MCP2515::ERROR err = mcp2515.readMessage(&rxFrame);
 
     if (err == MCP2515::ERROR_OK) {
+      lastMessageTime = millis();
       printFrame(rxFrame);
     } else if (err != MCP2515::ERROR_NOMSG) {
       Serial.print(F("[HATA] readMessage kodu: "));
       Serial.println((int)err);
+    }
+  }
+
+  // Eger 3 saniye boyunca hic veri gelmezse kullaniciyi uyar
+  if (millis() - lastMessageTime > 3000) {
+    if (millis() - lastWarningTime > 3000) {
+      Serial.println(F("[UYARI] CAN hattindan veri gelmiyor! Baglantilari (CAN H / CAN L) veya Baud Rate ayarini kontrol edin."));
+      lastWarningTime = millis();
     }
   }
 
